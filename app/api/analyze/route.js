@@ -1,48 +1,28 @@
+import { analyzeText } from "@/lib/analyzer-service";
+import { saveAnalysis } from "@/lib/analysis-store";
+import { getErrorStatus } from "@/lib/errors/provider-error";
+
 export async function POST(request) {
-  const { text } = await request.json();
+  try {
+    const body = await request.json();
+    const { analysis, run } = await analyzeText(body?.text, {
+      provider: body?.provider,
+      model: body?.model,
+      promptVersion: body?.promptVersion,
+    });
+    const record = await saveAnalysis({
+      text: body.text.trim(),
+      analysis,
+      metadata: run,
+    });
 
-  const prompt = `Analyze the following text and return ONLY a JSON object.
-No explanation, no markdown, no backticks. Just raw JSON.
+    return Response.json(record, { status: 201 });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unexpected error while analyzing text.";
 
-{
-  "sentiment": "positive" or "negative" or "neutral" or "mixed",
-  "sentimentScore": a number from -1.0 (very negative) to 1.0 (very positive),
-  "tone": ["array", "of", "2-3", "tones"],
-  "keyThemes": ["array", "of", "3-5", "themes"],
-  "entities": ["people, places, or organizations mentioned"],
-  "summary": "one sentence that summarizes the text"
-}
+    const status = getErrorStatus(error) ?? (/required|fewer/.test(message) ? 400 : 502);
 
-Text to analyze:
-"${text}"`;
-
-  const response = await fetch("http://localhost:11434/api/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "llama3.2",
-      prompt: prompt,
-      stream: false,
-    }),
-  });
-
-  const data = await response.json();
-  const rawText = data.response;
-
-  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    return Response.json({ error: "Could not parse response" }, { status: 500 });
+    return Response.json({ error: message }, { status });
   }
-
-  const cleaned = jsonMatch[0]
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
-    .replace(/,\s*}/g, "}")
-    .replace(/,\s*]/g, "]");
-
-  const result = JSON.parse(cleaned);
-
-  // Log so we can see exactly what Llama returned
-  console.log("LLAMA RESPONSE:", JSON.stringify(result, null, 2));
-
-  return Response.json(result);
 }

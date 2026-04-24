@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+data/*.db
+data/.sqlite-migrated
 
 # debug
 npm-debug.log*

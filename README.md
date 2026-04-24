@@ -101,6 +101,32 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
+## 🐳 Docker
+
+Build and run the app in Docker:
+
+```bash
+docker compose up --build
+```
+
+Then open [http://localhost:3000](http://localhost:3000).
+
+Notes:
+
+- The container expects Ollama to be running on your host machine by default.
+- `docker-compose.yml` points `OLLAMA_BASE_URL` to `http://host.docker.internal:11434`.
+- On first use, make sure the model exists on the host:
+
+```bash
+ollama pull llama3.2
+ollama serve
+```
+
+- If you want to use Gemini instead, keep `GEMINI_API_KEY` in `.env.local` before starting Docker.
+- SQLite data is persisted through the `./data` bind mount.
+
+---
+
 ## 💡 Key Concepts Learned
 
 - **NLP** — teaching computers to understand human language
